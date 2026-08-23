@@ -63,6 +63,8 @@ class ProductService:
         max_stock: int | None = None,
         sort: str | None = None,
         category_ids: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ):
 
         if min_price is not None and min_price < 0:
@@ -97,6 +99,8 @@ class ProductService:
             max_stock=max_stock,
             sort=sort,
             category_ids=category_ids,
+            page=page,
+            page_size=page_size,
         )
 
     def get_by_id(self, id):

@@ -33,7 +33,9 @@ class ProductRepository:
         min_stock: int | None = None,
         max_stock: int | None = None,
         sort: str | None = None,
-        category_ids: int | None = None
+        category_ids: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ):
         query = self.session.query(Product)
 
@@ -53,9 +55,7 @@ class ProductRepository:
             query = query.filter(Product.stock <= max_stock)
 
         if category_ids:
-            query = query.filter(
-                Product.category_id.in_(category_ids)
-            )
+            query = query.filter(Product.category_id.in_(category_ids))
 
         if sort == "price_asc":
             query = query.order_by(Product.price.asc())
@@ -80,6 +80,10 @@ class ProductRepository:
 
         elif sort == "oldest":
             query = query.order_by(Product.created_at.asc())
+
+        offset = (page - 1) * page_size
+
+        query = query.offset(offset).limit(page_size)
 
         return query.all()
 

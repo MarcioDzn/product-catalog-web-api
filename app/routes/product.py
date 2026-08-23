@@ -41,6 +41,8 @@ def get_products(
     max_stock: int | None = None,
     sort: str | None = None,
     category_ids: Annotated[list[int] | None, Query()] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     product_service: ProductService = Depends(get_product_service),
 ):
     try:
@@ -51,6 +53,8 @@ def get_products(
             min_stock=min_stock,
             max_stock=max_stock,
             sort=sort,
+            page=page,
+            page_size=page_size,
             category_ids=category_ids,
         )
 
