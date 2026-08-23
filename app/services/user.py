@@ -1,4 +1,4 @@
-from app.exceptions import NotFoundError
+from app.exceptions import NotFoundError, UniqueFieldError
 
 
 class UserService:
@@ -7,6 +7,9 @@ class UserService:
         self.session = session
 
     def create(self, user_data):
+        user = self.user_repository.get_by_email(user_data.email)
+        if user:
+            raise UniqueFieldError("E-mail já cadastrado")
         return self.user_repository.create(user_data)
 
     def get_all(self):
