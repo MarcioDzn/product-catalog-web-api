@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.auth import get_current_user, get_optional_current_user
 from app.dependencies import get_product_service
 from app.exceptions import (
     ConflictError,
@@ -9,6 +10,7 @@ from app.exceptions import (
     UniqueFieldError,
     UnprocessableEntityError,
 )
+from app.models import User
 from app.schemas import ProductCreate, ProductRead, ProductUpdate
 from app.services import ProductService
 
@@ -19,6 +21,7 @@ router = APIRouter(prefix="/products", tags=["Products"])
 def create(
     product_data: ProductCreate,
     product_service: ProductService = Depends(get_product_service),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         return product_service.create(product_data)
@@ -31,7 +34,9 @@ def create(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
 
 
-# TODO: Adicionar paginação
+# TODO: Adicionar verificação de auth
+# Apenas usuários autenticados podem filtrar por is_visible
+# Usuários não auth veem apenas visible=True
 @router.get("/", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
 def get_products(
     title: str | None = None,
@@ -44,6 +49,7 @@ def get_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     product_service: ProductService = Depends(get_product_service),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
     try:
         return product_service.get_all(
