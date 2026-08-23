@@ -5,7 +5,7 @@ class ProductImageRepository:
     def __init__(self, session):
         self.session = session
 
-    def create(self, product_image_data):
+    def create(self, product_image_data, commit=True):
         product_image_db = ProductImage(
             product_id=product_image_data.product_id,
             url=product_image_data.url,
@@ -13,8 +13,12 @@ class ProductImageRepository:
         )
 
         self.session.add(product_image_db)
-        self.session.commit()
-        self.session.refresh(product_image_db)
+
+        if commit:
+            self.session.commit()
+            self.session.refresh(product_image_db)
+        else:
+            self.session.flush()
 
         return product_image_db
 

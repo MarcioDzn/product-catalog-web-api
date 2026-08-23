@@ -5,7 +5,7 @@ class ProductRepository:
     def __init__(self, session):
         self.session = session
 
-    def create(self, product_data):
+    def create(self, product_data, commit=True):
         product_db = Product(
             category_id=product_data.category_id,
             title=product_data.title,
@@ -16,8 +16,12 @@ class ProductRepository:
         )
 
         self.session.add(product_db)
-        self.session.commit()
-        self.session.refresh(product_db)
+
+        if commit:
+            self.session.commit()
+            self.session.refresh(product_db)
+        else:
+            self.session.flush()
 
         return product_db
 
