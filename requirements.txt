@@ -1,0 +1,9 @@
+fastapi[standard]
+pydantic_settings
+pydantic[standard]
+SQLAlchemy
+alembic
+python-dotenv
+psycopg2-binary
+passlib
+python-jose[cryptography]
