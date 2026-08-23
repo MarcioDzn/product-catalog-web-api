@@ -22,6 +22,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+optional_oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="token",
+    auto_error=False,
+)
+
 def get_user(session: Session, username: str):
     # username é o email do usuário
     return session.query(User).filter(User.email == username).first()
@@ -59,7 +64,7 @@ async def get_current_user(
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Não foi possível validar as credenciais",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -75,6 +80,31 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_optional_current_user(
+    token: str | None = Depends(optional_oauth2_scheme),
+    session: Session = Depends(get_session),
+):
+    if token is None:
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+        )
+
+        username: str = payload.get("sub")
+
+        if username is None:
+            return None
+
+    except JWTError:
+        return None
+
+    return get_user(session, username=username)
 
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
