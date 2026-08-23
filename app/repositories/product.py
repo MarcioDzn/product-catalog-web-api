@@ -5,6 +5,23 @@ class ProductRepository:
     def __init__(self, session):
         self.session = session
 
+    def _apply_sort(self, query, sort: str | None):
+        sort_options = {
+            "price_asc": Product.price.asc(),
+            "price_desc": Product.price.desc(),
+            "stock_asc": Product.stock.asc(),
+            "stock_desc": Product.stock.desc(),
+            "title_asc": Product.title.asc(),
+            "title_desc": Product.title.desc(),
+            "newest": Product.created_at.desc(),
+            "oldest": Product.created_at.asc(),
+        }
+
+        if sort in sort_options:
+            query = query.order_by(sort_options[sort])
+
+        return query
+
     def create(self, product_data, commit=True):
         product_db = Product(
             category_id=product_data.category_id,
@@ -33,7 +50,7 @@ class ProductRepository:
         min_stock: int | None = None,
         max_stock: int | None = None,
         sort: str | None = None,
-        category_ids: int | None = None,
+        category_ids: list[int] | None = None,
         page: int = 1,
         page_size: int = 20,
     ):
@@ -57,29 +74,7 @@ class ProductRepository:
         if category_ids:
             query = query.filter(Product.category_id.in_(category_ids))
 
-        if sort == "price_asc":
-            query = query.order_by(Product.price.asc())
-
-        elif sort == "price_desc":
-            query = query.order_by(Product.price.desc())
-
-        elif sort == "stock_asc":
-            query = query.order_by(Product.stock.asc())
-
-        elif sort == "stock_desc":
-            query = query.order_by(Product.stock.desc())
-
-        elif sort == "title_asc":
-            query = query.order_by(Product.title.asc())
-
-        elif sort == "title_desc":
-            query = query.order_by(Product.title.desc())
-
-        elif sort == "newest":
-            query = query.order_by(Product.created_at.desc())
-
-        elif sort == "oldest":
-            query = query.order_by(Product.created_at.asc())
+        query = self._apply_sort(query, sort)
 
         offset = (page - 1) * page_size
 

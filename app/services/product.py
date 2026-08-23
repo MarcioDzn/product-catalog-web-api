@@ -62,7 +62,7 @@ class ProductService:
         min_stock: int | None = None,
         max_stock: int | None = None,
         sort: str | None = None,
-        category_ids: int | None = None,
+        category_ids: list[int] | None = None,
         page: int = 1,
         page_size: int = 20,
     ):
