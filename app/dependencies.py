@@ -1,8 +1,8 @@
 from fastapi import Depends
 
 from app.database import SessionLocal
-from app.repositories import CategoryRepository, ProductRepository, UserRepository
-from app.services import CategoryService, ProductService, UserService
+from app.repositories import CategoryRepository, ProductRepository, UserRepository, ProductImageRepository
+from app.services import CategoryService, ProductService, UserService, ProductImageService
 
 
 def get_session():
@@ -27,3 +27,9 @@ def get_product_service(session=Depends(get_session)):
     category_repository = CategoryRepository(session)
     product_repository = ProductRepository(session)
     return ProductService(product_repository, category_repository)
+
+
+def get_product_image_service(session=Depends(get_session)):
+    product_repository = ProductRepository(session)
+    product_image_repository = ProductImageRepository(session)
+    return ProductImageService(product_image_repository, product_repository)
