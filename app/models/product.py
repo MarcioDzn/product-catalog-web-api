@@ -29,3 +29,7 @@ class Product(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     category = relationship("Category", back_populates="products")
+
+    images = relationship(
+        "ProductImage", back_populates="product", cascade="all, delete-orphan"
+    )
