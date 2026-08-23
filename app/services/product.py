@@ -1,13 +1,22 @@
-from app.exceptions import NotFoundError, UnprocessableEntityError
-from app.repositories import CategoryRepository, ProductRepository
+from app.exceptions import ConflictError, NotFoundError, UnprocessableEntityError
+from app.repositories import (
+    CategoryRepository,
+    ProductImageRepository,
+    ProductRepository,
+)
+from app.schemas import ProductImageCreate
 
 
 class ProductService:
     def __init__(
-        self, repository: ProductRepository, category_repository: CategoryRepository
+        self,
+        repository: ProductRepository,
+        category_repository: CategoryRepository,
+        product_image_repository: ProductImageRepository,
     ):
-        self.category_repository = category_repository
         self.repository = repository
+        self.category_repository = category_repository
+        self.product_image_repository = product_image_repository
 
     def create(self, product_data):
         category = self.category_repository.get_by_id(product_data.category_id)
@@ -15,8 +24,35 @@ class ProductService:
         if category is None:
             raise NotFoundError("Categoria não encontrada")
 
-        return self.repository.create(product_data)
+        cover_count = sum(image.is_cover for image in product_data.images)
+        if cover_count > 1:
+            raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
 
+        try:
+            product = self.repository.create(
+                product_data,
+                commit=False,
+            )
+
+            for image_data in product_data.images:
+                image = ProductImageCreate(
+                    product_id=product.id,
+                    url=image_data.url,
+                    is_cover=image_data.is_cover,
+                )
+
+                self.product_image_repository.create(
+                    image,
+                    commit=False,
+                )
+
+            self.repository.session.commit()
+            self.repository.session.refresh(product)
+
+            return product
+        except Exception:
+            self.repository.session.rollback()
+            raise
 
     def get_all(
         self,
@@ -26,9 +62,9 @@ class ProductService:
         min_stock: int | None = None,
         max_stock: int | None = None,
         sort: str | None = None,
-        category_ids: int | None = None
+        category_ids: int | None = None,
     ):
-        
+
         if min_price is not None and min_price < 0:
             raise UnprocessableEntityError("Preço mínimo não pode ser negativo")
 
@@ -60,7 +96,7 @@ class ProductService:
             min_stock=min_stock,
             max_stock=max_stock,
             sort=sort,
-            category_ids=category_ids
+            category_ids=category_ids,
         )
 
     def get_by_id(self, id):

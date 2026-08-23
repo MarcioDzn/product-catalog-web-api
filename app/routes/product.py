@@ -1,8 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
 from app.dependencies import get_product_service
-from app.exceptions import NotFoundError, UniqueFieldError, UnprocessableEntityError
+from app.exceptions import (
+    ConflictError,
+    NotFoundError,
+    UniqueFieldError,
+    UnprocessableEntityError,
+)
 from app.schemas import ProductCreate, ProductRead, ProductUpdate
 from app.services import ProductService
 
@@ -21,10 +27,11 @@ def create(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+    except ConflictError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
 
 
 # TODO: Adicionar paginação
-
 @router.get("/", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
 def get_products(
     title: str | None = None,
@@ -51,6 +58,7 @@ def get_products(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
         )
+
 
 @router.get("/{id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def get_product_by_id(
