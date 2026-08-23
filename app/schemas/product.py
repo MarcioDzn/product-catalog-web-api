@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas import ProductImageCreate, ProductImageRead
+from app.schemas.product_image import ProductImageCreate, ProductImageRead
 
 
 class ProductBase(BaseModel):
