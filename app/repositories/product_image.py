@@ -25,6 +25,16 @@ class ProductImageRepository:
             .all()
         )
 
+    def get_cover_by_product_id(self, product_id):
+        return (
+            self.session.query(ProductImage)
+            .filter(
+                ProductImage.product_id == product_id,
+                ProductImage.is_cover.is_(True),
+            )
+            .first()
+        )
+    
     def unset_cover(self, image):
         image.is_cover = False
         self.session.flush()
