@@ -30,6 +30,9 @@ class UserRepository:
     def get_by_id(self, id):
         return self.session.query(User).filter(User.id == id).first()
 
+    def get_by_email(self, email):
+        return self.session.query(User).filter(User.email == email).first()
+
     def update(self, user, user_data):
         updated_data = {}
         for k, v in user_data.dict(exclude_unset=True).items():
@@ -46,7 +49,6 @@ class UserRepository:
         self.session.refresh(user)
 
         return user
-    
 
     def delete(self, user):
         self.session.delete(user)

@@ -1,4 +1,5 @@
 from app.exceptions import NotFoundError, UniqueFieldError
+from app.utils.security import get_password_hash
 
 
 class UserService:
@@ -10,6 +11,10 @@ class UserService:
         user = self.user_repository.get_by_email(user_data.email)
         if user:
             raise UniqueFieldError("E-mail já cadastrado")
+
+        hashed_password = get_password_hash(user_data.password)
+        user_data.password = hashed_password
+
         return self.user_repository.create(user_data)
 
     def get_all(self):
