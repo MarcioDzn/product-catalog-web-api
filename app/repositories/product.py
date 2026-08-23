@@ -29,7 +29,7 @@ class ProductRepository:
         min_stock: int | None = None,
         max_stock: int | None = None,
         sort: str | None = None,
-        category_id: int | None = None
+        category_ids: int | None = None
     ):
         query = self.session.query(Product)
 
@@ -48,8 +48,10 @@ class ProductRepository:
         if max_stock is not None:
             query = query.filter(Product.stock <= max_stock)
 
-        if category_id is not None:
-            query = query.filter(Product.category_id == category_id)
+        if category_ids:
+            query = query.filter(
+                Product.category_id.in_(category_ids)
+            )
 
         if sort == "price_asc":
             query = query.order_by(Product.price.asc())

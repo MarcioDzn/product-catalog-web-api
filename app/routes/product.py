@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Annotated
 
 from app.dependencies import get_product_service
 from app.exceptions import NotFoundError, UniqueFieldError, UnprocessableEntityError
@@ -22,6 +23,8 @@ def create(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
 
 
+# TODO: Adicionar paginação
+
 @router.get("/", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
 def get_products(
     title: str | None = None,
@@ -30,32 +33,7 @@ def get_products(
     min_stock: int | None = None,
     max_stock: int | None = None,
     sort: str | None = None,
-    product_service: ProductService = Depends(get_product_service),
-):
-    try:
-        return product_service.get_all(
-            title=title,
-            min_price=min_price,
-            max_price=max_price,
-            min_stock=min_stock,
-            max_stock=max_stock,
-            sort=sort
-        )
-
-    except UnprocessableEntityError as error:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
-        )
-
-@router.get("/category/{category_id}", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
-def get_products_by_category(
-    category_id: int,
-    title: str | None = None,
-    min_price: float | None = None,
-    max_price: float | None = None,
-    min_stock: int | None = None,
-    max_stock: int | None = None,
-    sort: str | None = None,
+    category_ids: Annotated[list[int] | None, Query()] = None,
     product_service: ProductService = Depends(get_product_service),
 ):
     try:
@@ -66,14 +44,13 @@ def get_products_by_category(
             min_stock=min_stock,
             max_stock=max_stock,
             sort=sort,
-            category_id=category_id
+            category_ids=category_ids,
         )
 
     except UnprocessableEntityError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
         )
-    
 
 @router.get("/{id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def get_product_by_id(
