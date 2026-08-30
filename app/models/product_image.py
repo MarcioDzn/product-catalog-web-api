@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Index
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Index, TEXT
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -9,7 +9,7 @@ class ProductImage(Base):
 
     id = Column(Integer, primary_key=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    url = Column(String(500), nullable=False)
+    url = Column(TEXT, nullable=False)
     is_cover = Column(Boolean, nullable=False, default=False)
 
     product = relationship("Product", back_populates="images")
