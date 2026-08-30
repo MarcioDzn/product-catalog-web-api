@@ -21,7 +21,7 @@ router = APIRouter(prefix="/products", tags=["Products"])
 def create(
     product_data: ProductCreate,
     product_service: ProductService = Depends(get_product_service),
-    current_user: User = Depends(get_current_user),
+    #current_user: User = Depends(get_current_user),
 ):
     try:
         return product_service.create(product_data)

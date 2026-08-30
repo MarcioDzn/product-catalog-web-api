@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.product_image import ProductImageCreate, ProductImageRead
+from app.schemas.category import CategoryRead
 
 
 class ProductBase(BaseModel):
@@ -29,8 +30,14 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
 
 
-class ProductRead(ProductBase):
+class ProductRead(BaseModel):
     id: int
+    category: CategoryRead
+    title: str
+    description: Optional[str] = None
+    price: Decimal
+    is_visible: bool = True
+    stock: int = 0
     images: list[ProductImageRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
