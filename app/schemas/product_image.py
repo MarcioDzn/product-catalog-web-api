@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from typing import Optional
 
 
 class ProductImageBase(BaseModel):
@@ -11,8 +12,9 @@ class ProductImageCreate(ProductImageBase):
 
 
 class ProductImageUpdate(BaseModel):
-    url: str | None = None
-    is_cover: bool | None = None
+    id: Optional[int] = None
+    url: str
+    is_cover: bool
 
 
 class ProductImageRead(ProductImageBase):

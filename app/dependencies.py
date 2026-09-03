@@ -38,7 +38,7 @@ def get_product_service(session=Depends(get_session)):
     product_repository = ProductRepository(session)
     product_image_repository = ProductImageRepository(session)
     return ProductService(
-        product_repository, category_repository, product_image_repository
+        product_repository, category_repository, product_image_repository, session
     )
 
 

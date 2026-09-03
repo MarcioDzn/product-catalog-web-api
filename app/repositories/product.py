@@ -85,7 +85,7 @@ class ProductRepository:
     def get_by_id(self, id):
         return self.session.query(Product).filter(Product.id == id).first()
 
-    def update(self, product, product_data):
+    def update(self, product, product_data, commit=True):
         updated_data = {}
 
         for key, value in product_data.model_dump(exclude_unset=True).items():
@@ -98,11 +98,18 @@ class ProductRepository:
             if key in db_fields:
                 setattr(product, key, value)
 
-        self.session.commit()
-        self.session.refresh(product)
+        if commit:
+            self.session.commit()
+            self.session.refresh(product)
+        else:
+            self.session.flush()
 
         return product
 
-    def delete(self, product):
+    def delete(self, product, commit=True):
         self.session.delete(product)
-        self.session.commit()
+        
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()

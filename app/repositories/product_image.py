@@ -38,7 +38,7 @@ class ProductImageRepository:
             )
             .first()
         )
-    
+
     def unset_cover(self, image):
         image.is_cover = False
         self.session.flush()

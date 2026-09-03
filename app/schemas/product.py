@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.product_image import ProductImageCreate, ProductImageRead
+from app.schemas.product_image import ProductImageCreate, ProductImageUpdate, ProductImageRead
 from app.schemas.category import CategoryRead
 
 
@@ -28,6 +28,7 @@ class ProductUpdate(BaseModel):
     price: Optional[Decimal] = None
     is_visible: Optional[bool] = None
     stock: Optional[int] = None
+    images: Optional[list[ProductImageUpdate]] = None
 
 
 class ProductRead(BaseModel):
