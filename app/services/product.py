@@ -1,3 +1,5 @@
+import math
+
 from app.exceptions import ConflictError, NotFoundError, UnprocessableEntityError
 from app.models import ProductImage
 from app.repositories import (
@@ -94,7 +96,7 @@ class ProductService:
                     "Estoque mínimo não pode ser maior que o estoque máximo"
                 )
 
-        return self.repository.get_all(
+        products, total_items = self.repository.get_all(
             title=title,
             min_price=min_price,
             max_price=max_price,
@@ -105,6 +107,12 @@ class ProductService:
             page=page,
             page_size=page_size,
         )
+
+        return {
+            "total_pages": math.ceil(total_items / page_size),
+            "total_items": total_items,
+            "products": products,
+        }
 
     def get_by_id(self, id):
         product = self.repository.get_by_id(id)
@@ -117,39 +125,49 @@ class ProductService:
     def update(self, id, product_data):
         product = self.get_by_id(id)
 
-        if product_data.images is not None:
-            self._sync_product_images(product, product_data.images)
-
         try:
+            product.title = product_data.title
+            product.description = product_data.description
+            product.price = product_data.price
+            product.stock = product_data.stock
+            product.category_id = product_data.category_id
+            product.is_visible = product_data.is_visible
+
+            if product_data.images is not None:
+                self._sync_product_images(
+                    product,
+                    product_data.images
+                )
+
             self.session.commit()
             self.session.refresh(product)
+
             return product
-        except Exception as e:
+
+        except Exception:
             self.session.rollback()
-            raise e
+            raise
 
     def delete(self, id):
         product = self.get_by_id(id)
 
         return self.repository.delete(product)
 
-    def _sync_product_images(self, product, incoming_images):   
+    def _sync_product_images(self, product, incoming_images):
         incoming_ids = {img.id for img in incoming_images if img.id is not None}
 
         images_to_remove = [img for img in product.images if img.id not in incoming_ids]
         for img in images_to_remove:
-            product.images.remove(img) 
+            product.images.remove(img)
 
-        self.session.flush() 
+        self.session.flush()
 
         current_images_map = {img.id: img for img in product.images}
 
         for img_data in incoming_images:
             if img_data.id is None:
                 new_image = ProductImage(
-                    url=img_data.url, 
-                    product_id=product.id,
-                    is_cover=img_data.is_cover
+                    url=img_data.url, product_id=product.id, is_cover=img_data.is_cover
                 )
                 product.images.append(new_image)
             else:

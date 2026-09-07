@@ -11,7 +11,7 @@ from app.exceptions import (
     UnprocessableEntityError,
 )
 from app.models import User
-from app.schemas import ProductCreate, ProductRead, ProductUpdate
+from app.schemas import ProductCreate, ProductRead, ProductUpdate, ProductListResponse
 from app.services import ProductService
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -37,7 +37,7 @@ def create(
 # TODO: Adicionar verificação de auth
 # Apenas usuários autenticados podem filtrar por is_visible
 # Usuários não auth veem apenas visible=True
-@router.get("/", response_model=list[ProductRead], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=ProductListResponse, status_code=status.HTTP_200_OK)
 def get_products(
     title: str | None = None,
     min_price: float | None = None,

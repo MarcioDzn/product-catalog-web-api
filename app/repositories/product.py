@@ -76,11 +76,18 @@ class ProductRepository:
 
         query = self._apply_sort(query, sort)
 
+        total_items = query.count()
+
         offset = (page - 1) * page_size
 
-        query = query.offset(offset).limit(page_size)
+        products = (
+            query
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
 
-        return query.all()
+        return products, total_items
 
     def get_by_id(self, id):
         return self.session.query(Product).filter(Product.id == id).first()

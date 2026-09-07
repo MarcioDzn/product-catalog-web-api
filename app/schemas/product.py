@@ -29,8 +29,7 @@ class ProductUpdate(BaseModel):
     is_visible: Optional[bool] = None
     stock: Optional[int] = None
     images: Optional[list[ProductImageUpdate]] = None
-
-
+    
 class ProductRead(BaseModel):
     id: int
     category: CategoryRead
@@ -44,3 +43,9 @@ class ProductRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductListResponse(BaseModel):
+    total_items: int
+    total_pages: int
+    products: list[ProductRead]
