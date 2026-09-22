@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.dependencies import get_user_service
 from app.schemas import UserCreate, UserRead, UserUpdate
 from app.services import UserService
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -24,6 +25,11 @@ def create(
 def get_users(user_service: UserService = Depends(get_user_service)):
     return user_service.get_all()
 
+@router.get("/me", response_model=UserRead)
+def get_me(
+    current_user = Depends(get_current_user),
+):
+    return current_user
 
 @router.get("/{id}", response_model=UserRead, status_code=status.HTTP_200_OK)
 def get_user_by_id(id: int, user_service: UserService = Depends(get_user_service)):
