@@ -1,4 +1,5 @@
 from sqlalchemy import Column, DateTime, Integer, String, func
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -11,3 +12,15 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    products = relationship(
+        "Product",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    categories = relationship(
+        "Category",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

@@ -17,6 +17,11 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     title = Column(String(100), nullable=False)
     description = Column(String(1000))
@@ -33,3 +38,5 @@ class Product(Base):
     images = relationship(
         "ProductImage", back_populates="product", cascade="all, delete-orphan"
     )
+
+    user = relationship("User", back_populates="products")
