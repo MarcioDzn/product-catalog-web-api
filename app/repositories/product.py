@@ -1,4 +1,4 @@
-from app.models import Product
+from app.models import Product, Category
 
 
 class ProductRepository:
@@ -78,6 +78,13 @@ class ProductRepository:
 
         if category_ids:
             query = query.filter(Product.category_id.in_(category_ids))
+
+            if user_id is not None:
+                query = (
+                    query
+                    .join(Category)
+                    .filter(Category.user_id == user_id)
+        )
 
         query = self._apply_sort(query, sort)
 

@@ -31,6 +31,12 @@ class ProductService:
         if category is None:
             raise NotFoundError("Categoria não encontrada")
 
+        if category.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Você não tem permissão para cadastrar o produto com esta categoria",
+            )
+        
         cover_count = sum(image.is_cover for image in product_data.images)
         if cover_count > 1:
             raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
@@ -207,12 +213,24 @@ class ProductService:
             )
 
         try:
+
+            # verifica se o usuário é dono da categoria
+            category = self.category_repository.get_by_id(product_data.category_id)
+            if category is None:
+                raise NotFoundError("Categoria não encontrada")
+            if category.user_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Você não tem permissão para atualizar o produto com esta categoria",
+                )
+
             product.title = product_data.title
             product.description = product_data.description
             product.price = product_data.price
             product.stock = product_data.stock
             product.category_id = product_data.category_id
             product.is_visible = product_data.is_visible
+
 
             if product_data.images is not None:
                 self._sync_product_images(product, product_data.images)
