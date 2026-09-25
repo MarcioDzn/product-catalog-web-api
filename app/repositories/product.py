@@ -22,7 +22,7 @@ class ProductRepository:
 
         return query
 
-    def create(self, product_data, commit=True):
+    def create(self, product_data, user_id, commit=True):
         product_db = Product(
             category_id=product_data.category_id,
             title=product_data.title,
@@ -30,6 +30,7 @@ class ProductRepository:
             price=product_data.price,
             is_visible=product_data.is_visible,
             stock=product_data.stock,
+            user_id=user_id
         )
 
         self.session.add(product_db)
@@ -44,6 +45,7 @@ class ProductRepository:
 
     def get_all(
         self,
+        user_id: int | None = None,
         title: str | None = None,
         min_price: float | None = None,
         max_price: float | None = None,
@@ -55,6 +57,9 @@ class ProductRepository:
         page_size: int = 20,
     ):
         query = self.session.query(Product)
+
+        if user_id:
+            query = query.filter(Product.user_id == user_id)
 
         if title:
             query = query.filter(Product.title.ilike(f"%{title}%"))

@@ -8,8 +8,8 @@ class CategoryRepository:
     def __init__(self, session):
         self.session = session
 
-    def create(self, category_data):
-        category_db = Category(name=category_data.name)
+    def create(self, category_data, user_id):
+        category_db = Category(name=category_data.name, user_id=user_id)
 
         self.session.add(category_db)
 

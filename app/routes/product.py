@@ -21,10 +21,10 @@ router = APIRouter(prefix="/products", tags=["Products"])
 def create(
     product_data: ProductCreate,
     product_service: ProductService = Depends(get_product_service),
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return product_service.create(product_data)
+        return product_service.create(product_data, current_user)
 
     except UniqueFieldError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
@@ -49,7 +49,6 @@ def get_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     product_service: ProductService = Depends(get_product_service),
-    current_user: User | None = Depends(get_optional_current_user),
 ):
     try:
         return product_service.get_all(
@@ -61,7 +60,7 @@ def get_products(
             sort=sort,
             page=page,
             page_size=page_size,
-            category_ids=category_ids,
+            category_ids=category_ids
         )
 
     except UnprocessableEntityError as error:
@@ -70,9 +69,37 @@ def get_products(
         )
 
 
+@router.get("/me", response_model=ProductListResponse)
+def get_my_products(
+    title: str | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    min_stock: int | None = None,
+    max_stock: int | None = None,
+    sort: str | None = None,
+    category_ids: Annotated[list[int] | None, Query()] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    product_service: ProductService = Depends(get_product_service),
+    current_user: User = Depends(get_current_user),
+):
+    return product_service.get_my_products(
+        title=title,
+        min_price=min_price,
+        max_price=max_price,
+        min_stock=min_stock,
+        max_stock=max_stock,
+        sort=sort,
+        page=page,
+        page_size=page_size,
+        category_ids=category_ids,
+        current_user=current_user,
+    )
+
 @router.get("/{id}", response_model=ProductRead, status_code=status.HTTP_200_OK)
 def get_product_by_id(
-    id: int, product_service: ProductService = Depends(get_product_service)
+    id: int, 
+    product_service: ProductService = Depends(get_product_service)
 ):
     try:
         return product_service.get_by_id(id)
@@ -86,9 +113,10 @@ def update_product(
     id: int,
     product_data: ProductUpdate,
     product_service: ProductService = Depends(get_product_service),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return product_service.update(id, product_data)
+        return product_service.update(id, product_data, current_user)
 
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
@@ -99,10 +127,12 @@ def update_product(
 
 @router.delete("/{id}", response_model=None, status_code=status.HTTP_200_OK)
 def delete_product(
-    id: int, product_service: ProductService = Depends(get_product_service)
+    id: int, 
+    product_service: ProductService = Depends(get_product_service),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return product_service.delete(id)
+        return product_service.delete(id, current_user)
 
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))

@@ -1,7 +1,9 @@
 import math
 
+from fastapi import HTTPException, status
+
 from app.exceptions import ConflictError, NotFoundError, UnprocessableEntityError
-from app.models import ProductImage
+from app.models import ProductImage, User
 from app.repositories import (
     CategoryRepository,
     ProductImageRepository,
@@ -23,7 +25,7 @@ class ProductService:
         self.product_image_repository = product_image_repository
         self.session = session
 
-    def create(self, product_data):
+    def create(self, product_data, current_user):
         category = self.category_repository.get_by_id(product_data.category_id)
 
         if category is None:
@@ -36,6 +38,7 @@ class ProductService:
         try:
             product = self.repository.create(
                 product_data,
+                current_user.id,
                 commit=False,
             )
 
@@ -105,6 +108,70 @@ class ProductService:
             sort=sort,
             category_ids=category_ids,
             page=page,
+            page_size=page_size
+        )
+
+        return {
+            "total_pages": math.ceil(total_items / page_size),
+            "total_items": total_items,
+            "products": products,
+        }
+
+    def get_my_products(
+        self,
+        current_user: User,
+        title: str | None = None,
+        min_price: float | None = None,
+        max_price: float | None = None,
+        min_stock: int | None = None,
+        max_stock: int | None = None,
+        sort: str | None = None,
+        category_ids: list[int] | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ):
+        if min_price is not None and min_price < 0:
+            raise UnprocessableEntityError(
+                "Preço mínimo não pode ser negativo"
+            )
+
+        if max_price is not None and max_price < 0:
+            raise UnprocessableEntityError(
+                "Preço máximo não pode ser negativo"
+            )
+
+        if min_price is not None and max_price is not None:
+            if min_price > max_price:
+                raise UnprocessableEntityError(
+                    "Preço mínimo não pode ser maior que o preço máximo"
+                )
+
+        if min_stock is not None and min_stock < 0:
+            raise UnprocessableEntityError(
+                "Estoque mínimo não pode ser negativo"
+            )
+
+        if max_stock is not None and max_stock < 0:
+            raise UnprocessableEntityError(
+                "Estoque máximo não pode ser negativo"
+            )
+
+        if min_stock is not None and max_stock is not None:
+            if min_stock > max_stock:
+                raise UnprocessableEntityError(
+                    "Estoque mínimo não pode ser maior que o estoque máximo"
+                )
+
+        products, total_items = self.repository.get_all(
+            user_id=current_user.id,
+            title=title,
+            min_price=min_price,
+            max_price=max_price,
+            min_stock=min_stock,
+            max_stock=max_stock,
+            sort=sort,
+            category_ids=category_ids,
+            page=page,
             page_size=page_size,
         )
 
@@ -122,8 +189,22 @@ class ProductService:
 
         return product
 
-    def update(self, id, product_data):
-        product = self.get_by_id(id)
+    def update(
+        self,
+        id,
+        product_data,
+        current_user,
+    ):
+        product = self.repository.get_by_id(id)
+
+        if product is None:
+            raise NotFoundError("Produto não encontrado")
+
+        if product.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Você não tem permissão para acessar este produto",
+            )
 
         try:
             product.title = product_data.title
@@ -134,10 +215,7 @@ class ProductService:
             product.is_visible = product_data.is_visible
 
             if product_data.images is not None:
-                self._sync_product_images(
-                    product,
-                    product_data.images
-                )
+                self._sync_product_images(product, product_data.images)
 
             self.session.commit()
             self.session.refresh(product)
@@ -148,8 +226,17 @@ class ProductService:
             self.session.rollback()
             raise
 
-    def delete(self, id):
-        product = self.get_by_id(id)
+    def delete(self, id, current_user):
+        product = self.repository.get_by_id(id)
+
+        if product is None:
+            raise NotFoundError("Produto não encontrado")
+
+        if product.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Você não tem permissão para deletar este produto",
+            )
 
         return self.repository.delete(product)
 

@@ -32,6 +32,7 @@ class ProductUpdate(BaseModel):
     
 class ProductRead(BaseModel):
     id: int
+    user_id: int
     category: CategoryRead
     title: str
     description: Optional[str] = None
