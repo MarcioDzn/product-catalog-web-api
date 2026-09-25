@@ -15,13 +15,19 @@ class CategoryService:
             raise UniqueFieldError("Categoria já cadastrada")
 
         return self.repository.create(
-            category_data, current_user.id
+            category_data, 
+            current_user.id
         )
 
     def get_all(self, name):
         if name:
             return self.repository.get_all_by_name(name)
         return self.repository.get_all()
+
+    def get_my_categories(self, name, current_user):
+        if name:
+            return self.repository.get_all_by_name(name, current_user.id)
+        return self.repository.get_all(current_user.id)
 
     def get_by_id(self, id):
         category = self.repository.get_by_id(id)

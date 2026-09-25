@@ -24,16 +24,26 @@ class CategoryRepository:
 
             raise UniqueFieldError("Categoria já cadastrada")
 
-    def get_all(self):
-        return self.session.query(Category).all()
+    def get_all(self, user_id: int | None = None):
+        query = self.session.query(Category)
+
+        if user_id is not None:
+            query = query.filter(Category.user_id == user_id)
+
+        return query.all()
 
     def get_by_id(self, id):
         return self.session.query(Category).filter(Category.id == id).first()
 
-    def get_all_by_name(self, name):
-        return (
-            self.session.query(Category).filter(Category.name.ilike(f"%{name}%")).all()
+    def get_all_by_name(self, name, user_id: int | None = None):
+        query = self.session.query(Category).filter(
+            Category.name.ilike(f"%{name}%")
         )
+
+        if user_id is not None:
+            query = query.filter(Category.user_id == user_id)
+
+        return query.all()
 
     def update(self, category, category_data):
         updated_data = {}

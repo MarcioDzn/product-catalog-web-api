@@ -29,6 +29,14 @@ def get_categories(
 ):
     return category_service.get_all(name)
 
+@router.get("/me", response_model=list[CategoryRead], status_code=status.HTTP_200_OK)
+def get_my_categories(
+    name: str | None = None,
+    category_service: CategoryService = Depends(get_category_service),
+    current_user: User = Depends(get_current_user),
+):
+    return category_service.get_my_categories(name, current_user)
+
 
 @router.get("/{id}", response_model=CategoryRead, status_code=status.HTTP_200_OK)
 def get_category_by_id(
