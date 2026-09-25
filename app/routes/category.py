@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.auth import get_current_user
 from app.dependencies import get_category_service
 from app.exceptions import NotFoundError, UniqueFieldError
+from app.models import User
 from app.schemas import CategoryCreate, CategoryRead, CategoryUpdate
 from app.services import CategoryService
 
@@ -12,15 +14,19 @@ router = APIRouter(prefix="/categories", tags=["Categories"])
 def create(
     category_data: CategoryCreate,
     category_service: CategoryService = Depends(get_category_service),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return category_service.create(category_data)
+        return category_service.create(category_data, current_user)
     except UniqueFieldError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
 
 
 @router.get("/", response_model=list[CategoryRead], status_code=status.HTTP_200_OK)
-def get_categories(name: str | None = None, category_service: CategoryService = Depends(get_category_service)):
+def get_categories(
+    name: str | None = None,
+    category_service: CategoryService = Depends(get_category_service),
+):
     return category_service.get_all(name)
 
 
@@ -39,9 +45,10 @@ def update_category(
     id: int,
     category_data: CategoryUpdate,
     category_service: CategoryService = Depends(get_category_service),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return category_service.update(id, category_data)
+        return category_service.update(id, category_data, current_user)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
     except UniqueFieldError as error:
@@ -50,9 +57,11 @@ def update_category(
 
 @router.delete("/{id}", response_model=None, status_code=status.HTTP_200_OK)
 def delete_category(
-    id: int, category_service: CategoryService = Depends(get_category_service)
+    id: int,
+    category_service: CategoryService = Depends(get_category_service),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return category_service.delete(id)
+        return category_service.delete(id, current_user)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
