@@ -10,7 +10,10 @@ class UserRepository:
 
     def create(self, user_data):
         user_db = User(
-            name=user_data.name, email=user_data.email, password=user_data.password
+            name=user_data.name, 
+            email=user_data.email, 
+            password=user_data.password,
+            phone= user_data.phone
         )
 
         self.session.add(user_db)
