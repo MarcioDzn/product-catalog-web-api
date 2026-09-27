@@ -295,3 +295,48 @@ class ProductService:
             self.session.delete(img)
 
         self.session.flush()
+
+        # Reseta as capas
+        for img in product.images:
+            img.is_cover = False
+
+        current_images_map = {img.id: img for img in product.images}
+
+        for img_data in incoming_images:
+            img_id = getattr(img_data, "id", None)
+            if img_id is not None:
+                try:
+                    img_id = int(img_id)
+                except (ValueError, TypeError):
+                    img_id = None
+
+            is_cover = bool(getattr(img_data, "is_cover", False))
+            raw_url = getattr(img_data, "url", "") or ""
+
+            # Caso 1: Imagem existente no banco
+            if img_id is not None and img_id in current_images_map:
+                existing_image = current_images_map[img_id]
+                existing_image.is_cover = is_cover
+
+                # Se o usuário substituiu o arquivo por um Base64 novo
+                if raw_url.startswith("data:"):
+                    delete_image(existing_image.url)
+                    new_path = upload_base64_image(
+                        image_base64=raw_url,
+                        product_id=product.id,
+                    )
+                    existing_image.url = new_path
+
+            # Caso 2: Imagem Nova
+            else:
+                if raw_url.startswith("data:"):
+                    path = upload_base64_image(
+                        image_base64=raw_url,
+                        product_id=product.id,
+                    )
+                    new_image = ProductImage(
+                        url=path,
+                        product_id=product.id,
+                        is_cover=is_cover,
+                    )
+                    product.images.append(new_image)
