@@ -11,6 +11,7 @@ from app.repositories import (
 )
 from app.schemas import ProductImageCreate
 
+from app.services.storage import upload_base64_image
 
 class ProductService:
     def __init__(
@@ -49,9 +50,14 @@ class ProductService:
             )
 
             for image_data in product_data.images:
+                image_path = upload_base64_image(
+                    image_data.url,
+                    product.id,
+                )
+
                 image = ProductImageCreate(
                     product_id=product.id,
-                    url=image_data.url,
+                    url=image_path,
                     is_cover=image_data.is_cover,
                 )
 
@@ -271,9 +277,17 @@ class ProductService:
 
         for img_data in incoming_images:
             if img_data.id is None:
-                new_image = ProductImage(
-                    url=img_data.url, product_id=product.id, is_cover=img_data.is_cover
+                image_path = upload_base64_image(
+                    img_data.url,
+                    product.id,
                 )
+
+                new_image = ProductImage(
+                    url=image_path,
+                    product_id=product.id,
+                    is_cover=img_data.is_cover,
+                )
+
                 product.images.append(new_image)
             else:
                 if img_data.id in current_images_map:
