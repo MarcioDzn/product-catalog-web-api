@@ -257,6 +257,7 @@ class ProductService:
 
         return self.repository.delete(product)
 
+
     def _sync_product_images(self, product, incoming_images):
         cover_count = sum(image.is_cover for image in incoming_images)
 
@@ -293,12 +294,17 @@ class ProductService:
                     product_id=product.id,
                     is_cover=img_data.is_cover,
                 )
-
                 product.images.append(new_image)
 
             else:
                 if img_data.id in current_images_map:
                     existing_image = current_images_map[img_data.id]
-
-                    existing_image.url = img_data.url
                     existing_image.is_cover = img_data.is_cover
+
+                    if img_data.url.startswith("data:"):
+                        delete_image(existing_image.url)
+
+                        existing_image.url = upload_base64_image(
+                            img_data.url,
+                            product.id,
+                        )
