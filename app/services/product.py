@@ -296,9 +296,12 @@ class ProductService:
 
         self.session.flush()
 
-        # Reseta as capas
+        # Reseta as capas - flush imediato pra evitar conflito de constraint única
+        # (garante que nenhuma linha fica com is_cover=True enquanto a próxima
+        # ainda está sendo atualizada, evitando UniqueViolation em uq_product_cover)
         for img in product.images:
             img.is_cover = False
+        self.session.flush()
 
         current_images_map = {img.id: img for img in product.images}
 
