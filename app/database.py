@@ -17,7 +17,7 @@ url = URL.create(
     password=os.getenv("PASSWORD"),
     host=os.getenv("HOST"),
     database=os.getenv("DATABASE"),
-    port=int(os.getenv("PORT")),
+    port=int(os.getenv("DB_PORT")),
 )
 
 engine = create_engine(url)
