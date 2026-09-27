@@ -10,7 +10,7 @@ from app.repositories import (
     ProductRepository,
 )
 from app.schemas import ProductImageCreate
-from app.services.storage import upload_base64_image
+from app.services.storage import delete_image, upload_base64_image
 
 
 class ProductService:
@@ -252,13 +252,29 @@ class ProductService:
                 detail="Você não tem permissão para deletar este produto",
             )
 
+        for image in product.images:
+            delete_image(image.url)
+
         return self.repository.delete(product)
 
     def _sync_product_images(self, product, incoming_images):
-        incoming_ids = {img.id for img in incoming_images if img.id is not None}
+        cover_count = sum(image.is_cover for image in incoming_images)
+
+        if cover_count > 1:
+            raise ConflictError(
+                "Um produto não pode ter mais de uma imagem de capa"
+            )
+
+        incoming_ids = {
+            img.id
+            for img in incoming_images
+            if img.id is not None
+        }
 
         images_to_remove = [img for img in product.images if img.id not in incoming_ids]
+
         for img in images_to_remove:
+            delete_image(img.url)
             product.images.remove(img)
 
         self.session.flush()
@@ -267,20 +283,22 @@ class ProductService:
 
         for img_data in incoming_images:
             if img_data.id is None:
-                image_path = upload_base64_image(
+                image_url = upload_base64_image(
                     img_data.url,
                     product.id,
                 )
 
                 new_image = ProductImage(
-                    url=image_path,
+                    url=image_url,
                     product_id=product.id,
                     is_cover=img_data.is_cover,
                 )
 
                 product.images.append(new_image)
+
             else:
                 if img_data.id in current_images_map:
                     existing_image = current_images_map[img_data.id]
+
                     existing_image.url = img_data.url
                     existing_image.is_cover = img_data.is_cover

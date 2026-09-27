@@ -28,3 +28,12 @@ def upload_base64_image(
 
     return supabase.storage.from_(BUCKET).get_public_url(path)
 
+def delete_image(url: str):
+    marker = f"/storage/v1/object/public/{BUCKET}/"
+
+    if marker not in url:
+        raise ValueError("URL da imagem inválida")
+
+    path = url.split(marker, 1)[1]
+
+    supabase.storage.from_(BUCKET).remove([path])
