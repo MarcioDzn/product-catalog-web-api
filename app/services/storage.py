@@ -24,7 +24,6 @@ def upload_base64_image(
             elif mime == "image/jpeg":
                 ext = "jpg"
             else:
-
                 ext = mime.split("/")[-1].split("+")[0]
 
     elif "," in image_base64:
@@ -45,19 +44,21 @@ def upload_base64_image(
         file_options={"content-type": content_type},
     )
 
-    return supabase.storage.from_(BUCKET).get_public_url(path)
+    return path
 
 
-def delete_image(url: str):
-    if not url:
+def delete_image(path_or_url: str) -> None:
+    if not path_or_url:
         return
 
     marker = f"/storage/v1/object/public/{BUCKET}/"
 
-    if marker in url:
-        path = url.split(marker, 1)[1]
-    elif url.startswith("products/"):
-        path = url
+
+    if marker in path_or_url:
+        path = path_or_url.split(marker, 1)[1]
+
+    elif path_or_url.startswith("products/"):
+        path = path_or_url
     else:
         return
 

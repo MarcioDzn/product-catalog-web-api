@@ -10,7 +10,7 @@ from app.repositories import (
     ProductRepository,
 )
 from app.schemas import ProductImageCreate
-from app.services.storage import delete_image, upload_base64_image
+from app.utils.storage import delete_image, upload_base64_image
 
 
 class ProductService:
@@ -38,7 +38,7 @@ class ProductService:
                 detail="Você não tem permissão para cadastrar o produto com esta categoria",
             )
 
-        cover_count = sum(image.is_cover for image in product_data.images)
+        cover_count = sum(getattr(image, "is_cover", False) for image in product_data.images)
         if cover_count > 1:
             raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
 
@@ -48,16 +48,17 @@ class ProductService:
                 current_user.id,
                 commit=False,
             )
+            self.session.flush()
 
             for image_data in product_data.images:
-                image_path = upload_base64_image(
-                    image_data.url,
-                    product.id,
+                path = upload_base64_image(
+                    image_base64=image_data.url,
+                    product_id=product.id,
                 )
 
                 image = ProductImageCreate(
                     product_id=product.id,
-                    url=image_path,
+                    url=path,
                     is_cover=image_data.is_cover,
                 )
 
@@ -66,12 +67,13 @@ class ProductService:
                     commit=False,
                 )
 
-            self.repository.session.commit()
-            self.repository.session.refresh(product)
+            self.session.commit()
+            self.session.refresh(product)
 
             return product
+
         except Exception:
-            self.repository.session.rollback()
+            self.session.rollback()
             raise
 
     def get_all(
@@ -86,18 +88,16 @@ class ProductService:
         page: int = 1,
         page_size: int = 20,
     ):
-
         if min_price is not None and min_price < 0:
             raise UnprocessableEntityError("Preço mínimo não pode ser negativo")
 
         if max_price is not None and max_price < 0:
             raise UnprocessableEntityError("Preço máximo não pode ser negativo")
 
-        if min_price is not None and max_price is not None:
-            if min_price > max_price:
-                raise UnprocessableEntityError(
-                    "Preço mínimo não pode ser maior que o preço máximo"
-                )
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise UnprocessableEntityError(
+                "Preço mínimo não pode ser maior que o preço máximo"
+            )
 
         if min_stock is not None and min_stock < 0:
             raise UnprocessableEntityError("Estoque mínimo não pode ser negativo")
@@ -105,11 +105,10 @@ class ProductService:
         if max_stock is not None and max_stock < 0:
             raise UnprocessableEntityError("Estoque máximo não pode ser negativo")
 
-        if min_stock is not None and max_stock is not None:
-            if min_stock > max_stock:
-                raise UnprocessableEntityError(
-                    "Estoque mínimo não pode ser maior que o estoque máximo"
-                )
+        if min_stock is not None and max_stock is not None and min_stock > max_stock:
+            raise UnprocessableEntityError(
+                "Estoque mínimo não pode ser maior que o estoque máximo"
+            )
 
         products, total_items = self.repository.get_all(
             title=title,
@@ -124,7 +123,7 @@ class ProductService:
         )
 
         return {
-            "total_pages": math.ceil(total_items / page_size),
+            "total_pages": math.ceil(total_items / page_size) if page_size > 0 else 0,
             "total_items": total_items,
             "products": products,
         }
@@ -148,11 +147,10 @@ class ProductService:
         if max_price is not None and max_price < 0:
             raise UnprocessableEntityError("Preço máximo não pode ser negativo")
 
-        if min_price is not None and max_price is not None:
-            if min_price > max_price:
-                raise UnprocessableEntityError(
-                    "Preço mínimo não pode ser maior que o preço máximo"
-                )
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise UnprocessableEntityError(
+                "Preço mínimo não pode ser maior que o preço máximo"
+            )
 
         if min_stock is not None and min_stock < 0:
             raise UnprocessableEntityError("Estoque mínimo não pode ser negativo")
@@ -160,11 +158,10 @@ class ProductService:
         if max_stock is not None and max_stock < 0:
             raise UnprocessableEntityError("Estoque máximo não pode ser negativo")
 
-        if min_stock is not None and max_stock is not None:
-            if min_stock > max_stock:
-                raise UnprocessableEntityError(
-                    "Estoque mínimo não pode ser maior que o estoque máximo"
-                )
+        if min_stock is not None and max_stock is not None and min_stock > max_stock:
+            raise UnprocessableEntityError(
+                "Estoque mínimo não pode ser maior que o estoque máximo"
+            )
 
         products, total_items = self.repository.get_all(
             user_id=current_user.id,
@@ -180,7 +177,7 @@ class ProductService:
         )
 
         return {
-            "total_pages": math.ceil(total_items / page_size),
+            "total_pages": math.ceil(total_items / page_size) if page_size > 0 else 0,
             "total_items": total_items,
             "products": products,
         }
@@ -211,10 +208,10 @@ class ProductService:
             )
 
         try:
-            # verifica se o usuário é dono da categoria
             category = self.category_repository.get_by_id(product_data.category_id)
             if category is None:
                 raise NotFoundError("Categoria não encontrada")
+
             if category.user_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -252,59 +249,75 @@ class ProductService:
                 detail="Você não tem permissão para deletar este produto",
             )
 
-        for image in product.images:
-            delete_image(image.url)
+        try:
+            for img in product.images:
+                delete_image(img.url)
 
-        return self.repository.delete(product)
-
+            self.repository.delete(product)
+            self.session.commit()
+            return True
+        except Exception:
+            self.session.rollback()
+            raise
 
     def _sync_product_images(self, product, incoming_images):
-        cover_count = sum(image.is_cover for image in incoming_images)
-
+        cover_count = sum(1 for img in incoming_images if getattr(img, "is_cover", False))
         if cover_count > 1:
-            raise ConflictError(
-                "Um produto não pode ter mais de uma imagem de capa"
-            )
+            raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
 
-        incoming_ids = {
-            img.id
-            for img in incoming_images
-            if img.id is not None
-        }
+        incoming_ids = set()
+        for img in incoming_images:
+            img_id = getattr(img, "id", None)
+            if img_id is not None:
+                try:
+                    incoming_ids.add(int(img_id))
+                except (ValueError, TypeError):
+                    pass
 
         images_to_remove = [img for img in product.images if img.id not in incoming_ids]
-
         for img in images_to_remove:
             delete_image(img.url)
             product.images.remove(img)
+            self.session.delete(img)
 
         self.session.flush()
+
+
+        for img in product.images:
+            img.is_cover = False
 
         current_images_map = {img.id: img for img in product.images}
 
         for img_data in incoming_images:
-            if img_data.id is None:
-                image_url = upload_base64_image(
-                    img_data.url,
-                    product.id,
-                )
+            img_id = getattr(img_data, "id", None)
+            if img_id is not None:
+                try:
+                    img_id = int(img_id)
+                except (ValueError, TypeError):
+                    img_id = None
 
-                new_image = ProductImage(
-                    url=image_url,
+            is_cover = bool(getattr(img_data, "is_cover", False))
+
+            if img_id is None:
+                path = upload_base64_image(
+                    image_base64=img_data.url,
                     product_id=product.id,
-                    is_cover=img_data.is_cover,
+                )
+                new_image = ProductImage(
+                    url=path,
+                    product_id=product.id,
+                    is_cover=is_cover,
                 )
                 product.images.append(new_image)
-
             else:
-                if img_data.id in current_images_map:
-                    existing_image = current_images_map[img_data.id]
-                    existing_image.is_cover = img_data.is_cover
+                if img_id in current_images_map:
+                    existing_image = current_images_map[img_id]
+                    existing_image.is_cover = is_cover
 
-                    if img_data.url.startswith("data:"):
+                    if img_data.url and img_data.url.startswith("data:"):
                         delete_image(existing_image.url)
-
-                        existing_image.url = upload_base64_image(
-                            img_data.url,
-                            product.id,
+                        new_path = upload_base64_image(
+                            image_base64=img_data.url,
+                            product_id=product.id,
                         )
+                        existing_image.url = new_path
