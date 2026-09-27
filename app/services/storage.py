@@ -26,4 +26,5 @@ def upload_base64_image(
         },
     )
 
-    return path
+    return supabase.storage.from_(BUCKET).get_public_url(path)
+

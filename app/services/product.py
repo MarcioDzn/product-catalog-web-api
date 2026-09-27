@@ -10,8 +10,8 @@ from app.repositories import (
     ProductRepository,
 )
 from app.schemas import ProductImageCreate
-
 from app.services.storage import upload_base64_image
+
 
 class ProductService:
     def __init__(
@@ -37,7 +37,7 @@ class ProductService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Você não tem permissão para cadastrar o produto com esta categoria",
             )
-        
+
         cover_count = sum(image.is_cover for image in product_data.images)
         if cover_count > 1:
             raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
@@ -120,7 +120,7 @@ class ProductService:
             sort=sort,
             category_ids=category_ids,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
 
         return {
@@ -143,14 +143,10 @@ class ProductService:
         page_size: int = 20,
     ):
         if min_price is not None and min_price < 0:
-            raise UnprocessableEntityError(
-                "Preço mínimo não pode ser negativo"
-            )
+            raise UnprocessableEntityError("Preço mínimo não pode ser negativo")
 
         if max_price is not None and max_price < 0:
-            raise UnprocessableEntityError(
-                "Preço máximo não pode ser negativo"
-            )
+            raise UnprocessableEntityError("Preço máximo não pode ser negativo")
 
         if min_price is not None and max_price is not None:
             if min_price > max_price:
@@ -159,14 +155,10 @@ class ProductService:
                 )
 
         if min_stock is not None and min_stock < 0:
-            raise UnprocessableEntityError(
-                "Estoque mínimo não pode ser negativo"
-            )
+            raise UnprocessableEntityError("Estoque mínimo não pode ser negativo")
 
         if max_stock is not None and max_stock < 0:
-            raise UnprocessableEntityError(
-                "Estoque máximo não pode ser negativo"
-            )
+            raise UnprocessableEntityError("Estoque máximo não pode ser negativo")
 
         if min_stock is not None and max_stock is not None:
             if min_stock > max_stock:
@@ -219,7 +211,6 @@ class ProductService:
             )
 
         try:
-
             # verifica se o usuário é dono da categoria
             category = self.category_repository.get_by_id(product_data.category_id)
             if category is None:
@@ -236,7 +227,6 @@ class ProductService:
             product.stock = product_data.stock
             product.category_id = product_data.category_id
             product.is_visible = product_data.is_visible
-
 
             if product_data.images is not None:
                 self._sync_product_images(product, product_data.images)
