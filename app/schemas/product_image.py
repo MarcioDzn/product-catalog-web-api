@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
 from typing import Optional
+from pydantic import BaseModel, ConfigDict, field_validator
+from app.services.storage import get_public_url  
 
 
 class ProductImageBase(BaseModel):
@@ -14,7 +15,7 @@ class ProductImageCreate(ProductImageBase):
 class ProductImageUpdate(BaseModel):
     id: Optional[int] = None
     url: str
-    is_cover: bool
+    is_cover: bool = False
 
 
 class ProductImageRead(ProductImageBase):
@@ -22,3 +23,8 @@ class ProductImageRead(ProductImageBase):
     is_cover: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("url", mode="after")
+    @classmethod
+    def assemble_public_url(cls, v: str) -> str:
+        return get_public_url(v)

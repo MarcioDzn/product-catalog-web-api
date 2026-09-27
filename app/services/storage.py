@@ -53,7 +53,6 @@ def delete_image(path_or_url: str) -> None:
 
     marker = f"/storage/v1/object/public/{BUCKET}/"
 
-
     if marker in path_or_url:
         path = path_or_url.split(marker, 1)[1]
 
@@ -65,3 +64,12 @@ def delete_image(path_or_url: str) -> None:
     path = path.split("?")[0]
 
     supabase.storage.from_(BUCKET).remove([path])
+
+
+def get_public_url(path: str) -> str:
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+
+    return supabase.storage.from_(BUCKET).get_public_url(path)

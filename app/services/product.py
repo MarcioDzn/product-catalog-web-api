@@ -10,7 +10,7 @@ from app.repositories import (
     ProductRepository,
 )
 from app.schemas import ProductImageCreate
-from app.utils.storage import delete_image, upload_base64_image
+from app.services.storage import delete_image, upload_base64_image
 
 
 class ProductService:
@@ -42,6 +42,7 @@ class ProductService:
         if cover_count > 1:
             raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
 
+        uploaded_paths = []
         try:
             product = self.repository.create(
                 product_data,
@@ -55,6 +56,7 @@ class ProductService:
                     image_base64=image_data.url,
                     product_id=product.id,
                 )
+                uploaded_paths.append(path)
 
                 image = ProductImageCreate(
                     product_id=product.id,
@@ -74,6 +76,8 @@ class ProductService:
 
         except Exception:
             self.session.rollback()
+            for path in uploaded_paths:
+                delete_image(path)
             raise
 
     def get_all(
