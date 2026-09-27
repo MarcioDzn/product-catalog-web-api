@@ -10,7 +10,7 @@ from app.repositories import (
     ProductRepository,
 )
 from app.schemas import ProductImageCreate
-from app.services.storage import delete_image, upload_base64_image
+from app.services.storage import delete_image, upload_base64_image, get_public_url
 
 
 class ProductService:
@@ -270,6 +270,8 @@ class ProductService:
             raise ConflictError("Um produto não pode ter mais de uma imagem de capa")
 
         incoming_ids = set()
+        incoming_urls = set()  # fallback pra casar por url quando o id não vier
+
         for img in incoming_images:
             img_id = getattr(img, "id", None)
             if img_id is not None:
@@ -278,57 +280,18 @@ class ProductService:
                 except (ValueError, TypeError):
                     pass
 
-        # Remove do banco e do Supabase imagens que foram deletadas na interface
-        images_to_remove = [img for img in product.images if img.id not in incoming_ids]
+            raw_url = getattr(img, "url", "") or ""
+            if raw_url and not raw_url.startswith("data:"):
+                incoming_urls.add(raw_url)
+
+        # Só remove se NEM o id NEM a url baterem com algo que veio no payload
+        images_to_remove = [
+            img for img in product.images
+            if img.id not in incoming_ids and get_public_url(img.url) not in incoming_urls
+        ]
         for img in images_to_remove:
             delete_image(img.url)
             product.images.remove(img)
             self.session.delete(img)
 
         self.session.flush()
-
-        # Reseta as capas
-        for img in product.images:
-            img.is_cover = False
-
-        current_images_map = {img.id: img for img in product.images}
-
-        for img_data in incoming_images:
-            img_id = getattr(img_data, "id", None)
-            if img_id is not None:
-                try:
-                    img_id = int(img_id)
-                except (ValueError, TypeError):
-                    img_id = None
-
-            is_cover = bool(getattr(img_data, "is_cover", False))
-            raw_url = getattr(img_data, "url", "") or ""
-
-            # Caso 1: Imagem existente no banco
-            if img_id is not None and img_id in current_images_map:
-                existing_image = current_images_map[img_id]
-                existing_image.is_cover = is_cover
-
-                # Se o usuário substituiu o arquivo por um Base64 novo
-                if raw_url.startswith("data:"):
-                    delete_image(existing_image.url)
-                    new_path = upload_base64_image(
-                        image_base64=raw_url,
-                        product_id=product.id,
-                    )
-                    existing_image.url = new_path
-
-            # Caso 2: Imagem Nova
-            else:
-                # SÓ faz upload se for um Base64 real
-                if raw_url.startswith("data:"):
-                    path = upload_base64_image(
-                        image_base64=raw_url,
-                        product_id=product.id,
-                    )
-                    new_image = ProductImage(
-                        url=path,
-                        product_id=product.id,
-                        is_cover=is_cover,
-                    )
-                    product.images.append(new_image)
