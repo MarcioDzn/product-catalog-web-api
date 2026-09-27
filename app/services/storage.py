@@ -29,6 +29,8 @@ def upload_base64_image(
     elif "," in image_base64:
         image_base64 = image_base64.split(",", 1)[1]
 
+    image_base64 = image_base64.replace(" ", "+").strip().replace("\n", "").replace("\r", "")
+
     missing_padding = len(image_base64) % 4
     if missing_padding != 0:
         image_base64 += "=" * (4 - missing_padding)

@@ -278,6 +278,7 @@ class ProductService:
                 except (ValueError, TypeError):
                     pass
 
+        # Remove do banco e do Supabase imagens que foram deletadas na interface
         images_to_remove = [img for img in product.images if img.id not in incoming_ids]
         for img in images_to_remove:
             delete_image(img.url)
@@ -286,7 +287,7 @@ class ProductService:
 
         self.session.flush()
 
-
+        # Reseta as capas
         for img in product.images:
             img.is_cover = False
 
@@ -301,27 +302,33 @@ class ProductService:
                     img_id = None
 
             is_cover = bool(getattr(img_data, "is_cover", False))
+            raw_url = getattr(img_data, "url", "") or ""
 
-            if img_id is None:
-                path = upload_base64_image(
-                    image_base64=img_data.url,
-                    product_id=product.id,
-                )
-                new_image = ProductImage(
-                    url=path,
-                    product_id=product.id,
-                    is_cover=is_cover,
-                )
-                product.images.append(new_image)
+            # Caso 1: Imagem existente no banco
+            if img_id is not None and img_id in current_images_map:
+                existing_image = current_images_map[img_id]
+                existing_image.is_cover = is_cover
+
+                # Se o usuário substituiu o arquivo por um Base64 novo
+                if raw_url.startswith("data:"):
+                    delete_image(existing_image.url)
+                    new_path = upload_base64_image(
+                        image_base64=raw_url,
+                        product_id=product.id,
+                    )
+                    existing_image.url = new_path
+
+            # Caso 2: Imagem Nova
             else:
-                if img_id in current_images_map:
-                    existing_image = current_images_map[img_id]
-                    existing_image.is_cover = is_cover
-
-                    if img_data.url and img_data.url.startswith("data:"):
-                        delete_image(existing_image.url)
-                        new_path = upload_base64_image(
-                            image_base64=img_data.url,
-                            product_id=product.id,
-                        )
-                        existing_image.url = new_path
+                # SÓ faz upload se for um Base64 real
+                if raw_url.startswith("data:"):
+                    path = upload_base64_image(
+                        image_base64=raw_url,
+                        product_id=product.id,
+                    )
+                    new_image = ProductImage(
+                        url=path,
+                        product_id=product.id,
+                        is_cover=is_cover,
+                    )
+                    product.images.append(new_image)
