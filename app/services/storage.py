@@ -4,8 +4,7 @@ import uuid
 from app.supabase import supabase
 
 
-BUCKET = "online-catalog"
-
+BUCKET = "online-catalog-bucket"
 
 def upload_base64_image(
     image_base64: str,
